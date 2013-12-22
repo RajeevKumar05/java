@@ -1,12 +1,19 @@
-package com.demo.messagebus;
+package com.demo.messagebus.server;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.SynchronousQueue;
+
+import org.json.JSONException;
+
+import com.demo.messagebus.Client;
+import com.demo.messagebus.common.Message;
 
 public class MessageBus {
 	
 	public static HashMap<String,List<Client>> clientStore = new HashMap<String,List<Client>>();
+	
 	
 	public static boolean addClient(String topic,Client cl){
 		if(clientStore.get(topic) == null){
@@ -19,8 +26,9 @@ public class MessageBus {
 		return true;
 	}
 	
-	public static boolean addMessage(Message m){
-		MessageHandler mh = new MessageHandler(m,clientStore.get(m.topic));
+	public static boolean process(Message m) throws JSONException{
+		MessageBusServer.queue.offer(m);
+		MessageHandler mh = new MessageHandler(m,clientStore.get(m.topic()));
 		mh.run();
 		return true;
 	}

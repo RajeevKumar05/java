@@ -1,5 +1,7 @@
 package com.demo.messagebus;
 
+import com.demo.messagebus.common.Message;
+
 public class Client2 implements Client {
 
 	@Override
