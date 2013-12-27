@@ -2,17 +2,17 @@ package com.demo.messagebus.server;
 
 import java.util.List;
 
-import org.json.JSONException;
-
-import com.demo.messagebus.Client;
+import com.demo.messagebus.common.Client;
 import com.demo.messagebus.common.Message;
 
-public class MessageHandler implements Runnable {
+public class MessageHandler {
+	
 	Message msg;
 	List<Client> clients;
+	
 	public MessageHandler(Message m, List<Client> clients){this.msg = m; this.clients = clients;}
-	@Override
-	public void run() {
+	
+	public void sendMessage() {
 		/*for(Client client : clients){
 			try {
 				Thread.sleep(2000);
@@ -28,6 +28,9 @@ public class MessageHandler implements Runnable {
 		}*/
 		System.out.println("********************************************");
 		System.out.println("Received Message : "+msg.toString());
+		for(Client client: clients){
+			client.push(msg);
+		}
 		System.out.println("Queue size = "+MessageBusServer.queue.size());
 		System.out.println("********************************************");
 	}

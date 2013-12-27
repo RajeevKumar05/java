@@ -7,7 +7,8 @@ import java.util.concurrent.SynchronousQueue;
 
 import org.json.JSONException;
 
-import com.demo.messagebus.Client;
+import com.demo.messagebus.common.Client;
+import com.demo.messagebus.common.Constants;
 import com.demo.messagebus.common.Message;
 
 public class MessageBus {
@@ -15,21 +16,27 @@ public class MessageBus {
 	public static HashMap<String,List<Client>> clientStore = new HashMap<String,List<Client>>();
 	
 	
-	public static boolean addClient(String topic,Client cl){
+	public static boolean addClient(Message m) throws NumberFormatException, JSONException{
+		String topic = m.topic();
+		System.out.println("Adding client for topic = "+m.topic());
 		if(clientStore.get(topic) == null){
 			List<Client> clnts = new ArrayList<Client>();
-			clnts.add(cl);
+			clnts.add(new NotifierClient(m.get(Constants.MESSAGEBUS_CLIENT_HOST),Integer.parseInt(m.get(Constants.MESSAGEBUS_CLIENT_PORT))));
 			clientStore.put(topic, clnts);
 		}else{
-			clientStore.get(topic).add(cl);
+			clientStore.get(topic).add(new NotifierClient(m.get(Constants.MESSAGEBUS_CLIENT_HOST),Integer.parseInt(m.get(Constants.MESSAGEBUS_CLIENT_PORT))));
 		}
 		return true;
 	}
 	
 	public static boolean process(Message m) throws JSONException{
+		if(m.containsKey("isRegistration") && m.get("isRegistration") != null && m.get("isRegistration").equalsIgnoreCase("YES")){
+			addClient(m);
+			return true;
+		}
 		MessageBusServer.queue.offer(m);
 		MessageHandler mh = new MessageHandler(m,clientStore.get(m.topic()));
-		mh.run();
+		mh.sendMessage();
 		return true;
 	}
 }

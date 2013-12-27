@@ -25,6 +25,13 @@ public class Message {
 				
 	}
 	
+	public boolean containsKey(String key){
+		if(msg.has(key))
+			return true;
+		else
+			return false;
+	}
+	
 	public String toString(){
 		return msg.toString();
 	}

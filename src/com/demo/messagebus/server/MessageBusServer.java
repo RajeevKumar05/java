@@ -13,7 +13,7 @@ public class MessageBusServer {
     	int port = 4444;
         ServerSocket serverSocket = null;
         try {
-        	String _port = System.getenv("port");
+        	String _port = System.getProperty("port");
         	if(_port != null)
         		port = Integer.parseInt(_port);
             serverSocket = new ServerSocket(port);

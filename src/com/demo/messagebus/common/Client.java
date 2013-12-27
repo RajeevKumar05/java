@@ -1,6 +1,5 @@
-package com.demo.messagebus;
+package com.demo.messagebus.common;
 
-import com.demo.messagebus.common.Message;
 
 public interface Client {
 	public boolean push(Message m);

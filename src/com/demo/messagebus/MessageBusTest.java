@@ -15,9 +15,9 @@ public class MessageBusTest {
 	 * @throws JSONException 
 	 */
 	public static void main(String[] args) throws JSONException {
-		MessageBus.addClient("topic1", new Client1());
-		MessageBus.addClient("topic2", new Client2());
-		MessageBus.addClient("topic2", new Client1());
+		//MessageBus.addClient("topic1", new Client1());
+		//MessageBus.addClient("topic2", new Client2());
+		//MessageBus.addClient("topic2", new Client1());
 		Map<String,Object> m = new HashMap<String,Object>();
 		m.put("firstName", "Rajeev");
 		m.put("lastName", "Kumar");

@@ -1,93 +1,184 @@
 package com.demo.messagebus.client;
 
-import java.io.*;
-import java.net.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.json.JSONException;
+
+import com.demo.messagebus.common.Constants;
+import com.demo.messagebus.common.IMBusWorker;
+import com.demo.messagebus.common.MBusQueue;
+import com.demo.messagebus.common.MBusQueueFactory;
+import com.demo.messagebus.common.MBusWorkerFactory;
 import com.demo.messagebus.common.Message;
+import com.demo.messagebus.common.MessageBusProducer;
 
-public class MessageBusClient {
-
-	public static void produce(String host,int port, Message message) throws IOException{
-
-		Socket mbusSocket = null;
-		PrintWriter out = null;
-		//BufferedReader in = null;
-		try {
-			mbusSocket = new Socket(host, port);
-			out = new PrintWriter(mbusSocket.getOutputStream(), true);
-			//in = new BufferedReader(new InputStreamReader(kkSocket.getInputStream()));
-		} catch (UnknownHostException e) {
-			System.err.println("Don't know about host: "+host+", port: "+port);
-			System.exit(1);
-		} catch (IOException e) {
-			System.err.println("Couldn't get I/O for the connection to: "+host+", port: "+port);
-			System.exit(1);
-		}
-		InputStream is = new ByteArrayInputStream(message.toString().getBytes());
-		BufferedReader br = new BufferedReader(new InputStreamReader(is));
-		StringBuilder msg = new StringBuilder();
-
-		String line = br.readLine();
-		while(line != null){
-			System.out.println("Line = "+line);
-			msg.append(line);
-			line = br.readLine();
-		}
-		out.println(msg);
-		out.println("BYE");
-		out.close();
-		//in.close();
-		br.close();
-		mbusSocket.close();
-	}
-
-	public static void main_test(String[] args) throws IOException {
-
-		Socket kkSocket = null;
-		PrintWriter out = null;
-		BufferedReader in = null;
-
-		try {
-			kkSocket = new Socket("localhost", 4444);
-			out = new PrintWriter(kkSocket.getOutputStream(), true);
-			in = new BufferedReader(new InputStreamReader(kkSocket.getInputStream()));
-		} catch (UnknownHostException e) {
-			System.err.println("Don't know about host: taranis.");
-			System.exit(1);
-		} catch (IOException e) {
-			System.err.println("Couldn't get I/O for the connection to: taranis.");
-			System.exit(1);
-		}
-
-		BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in));
-		String fromServer;
-		String fromUser;
-
-		while ((fromServer = in.readLine()) != null) {
-			System.out.println("Server: " + fromServer);
-			if (fromServer.equals("BYE."))
-				break;
-
-			fromUser = stdIn.readLine();
-			if (fromUser != null) {
-				System.out.println("Client: " + fromUser);
-				out.println(fromUser);
+public class MessageBusClient extends Thread{
+	@Override
+	public void run() {
+		String isOnlineClient = System.getProperty(Constants.ONLINE_CLIENT);
+		if(isOnlineClient != null && isOnlineClient.equalsIgnoreCase("TRUE")){
+			startAndRegisterClientToMBusServer();
+		}else{
+			try {
+				createConnectionToMBusServerAndListen();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
 
-		out.close();
+	}
+
+	public void readAndProcess(Socket skt) throws IOException{
+		BufferedReader in = new BufferedReader(
+				new InputStreamReader(
+						skt.getInputStream()));
+		String inputLine; 
+		StringBuilder input = new StringBuilder();
+
+		while ((inputLine = in.readLine()) != null) {
+
+			if (inputLine.equalsIgnoreCase("BYE")){
+				//break;
+				processMessage(input.toString());
+			}
+			input.append(inputLine);   
+		}
 		in.close();
-		stdIn.close();
-		kkSocket.close();
 	}
 	
-	public static void main(String[] s) throws IOException{
-		Map<String,Object> m = new HashMap<String,Object>();
-		m.put("firstName", "Rajeev");
-		m.put("lastName", "Kumar");
-		m.put("topic", "topic1");
-		MessageBusClient.produce("localhost", 4444, new Message(m));
+	public static void processMessage(String input){
+		System.out.println("************************************");
+		System.out.println("Client received : "+input);
+		Message msg = null;
+		String topic = null;
+		try {
+			msg = new Message(input);
+			topic = msg.topic();
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		MBusQueue queue = MBusQueueFactory.getQueue(topic);
+		if(queue != null)
+			queue.add(msg);
+		System.out.println("************************************");
 	}
+
+	public void createConnectionToMBusServerAndListen() throws IOException, JSONException{
+		Socket pipeToMBuseserver = null;
+		BufferedReader in = null;
+		String host = "localhost";
+		int port = 4444;
+
+		try {
+			String _host = System.getProperty(Constants.MESSAGEBUS_SERVER_HOST);
+			String _port = System.getProperty(Constants.MESSAGEBUS_SERVER_PORT);
+			if(_host != null && !_host.equalsIgnoreCase("")){
+				host = _host;
+			}
+			if(_port != null && !_port.equalsIgnoreCase("")){
+				port = Integer.parseInt(_port);
+			}
+			pipeToMBuseserver = new Socket(host, port);
+			in = new BufferedReader(new InputStreamReader(pipeToMBuseserver.getInputStream()));
+		} catch (UnknownHostException e) {
+			System.err.println("Don't know about host: "+host);
+			System.exit(1);
+		} catch (IOException e) {
+			System.err.println("Couldn't get I/O for the connection to: "+host);
+			System.exit(1);
+		}
+
+		StringBuilder fromServer = new StringBuilder();
+		String line;
+		while ((line = in.readLine()) != null) {
+			if (!line.equals("BYE"))
+				fromServer.append(line);
+			else{
+				System.out.println("************************************");
+				System.out.println("Client received : "+fromServer.toString());
+				Message msg = new Message(fromServer.toString());
+				MBusQueue queue = MBusQueueFactory.getQueue(msg.topic());
+				if(queue != null)
+					queue.add(msg);
+				System.out.println("************************************");
+				fromServer = new StringBuilder();
+			}
+			Map<String,Object> m = new HashMap<String,Object>();
+			m.put(Constants.MESSAGEBUS_TOPIC, System.getProperty(Constants.MESSAGEBUS_TOPIC));
+			m.put(Constants.MESSAGEBUS_COMMAND, Constants.FETCH_MESSAGE);
+			MessageBusProducer.writeToSocket(pipeToMBuseserver, new Message(m));
+		}
+		in.close();
+		pipeToMBuseserver.close();
+	}
+
+	public void startAndRegisterClientToMBusServer(){
+		int port = 9673;
+		ServerSocket clientSocket = null;
+		try {
+			String _port = System.getProperty(Constants.MESSAGEBUS_CLIENT_PORT);
+			if(_port != null)
+				port = Integer.parseInt(_port);
+			clientSocket = new ServerSocket(port);
+			MBusConfiguration.registerOnlineClient("localhost",port);
+		} catch (IOException e) {
+			System.err.println("MBus client could not listen on port: "+port+".");
+			System.exit(1);
+		}
+		System.out.println("MBus client is running at port : "+port+".");
+
+		Socket serverSocket = null;
+		while(true){
+			try {
+				System.out.println("Waiting for mbus server.....");
+				serverSocket = clientSocket.accept();
+			} catch (IOException e) {
+				System.err.println("Accept failed.");
+				e.printStackTrace();
+			}        
+			System.out.println(serverSocket.getInetAddress().toString()+" Connected");           
+			try {
+				readAndProcess(serverSocket);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+
+	public static void printProperties(){
+		System.out.println(Constants.MESSAGEBUS_TOPIC+" = "+System.getProperty(Constants.MESSAGEBUS_TOPIC));
+	}
+
+	public static void main(String[] s) throws InterruptedException, ClassNotFoundException, InstantiationException, IllegalAccessException{
+		MBusConfiguration.initConfig();
+		MBusConfiguration.initializeClientWorker();
+		MBusConfiguration.initializeClientQueue();
+
+		Thread clientThread = new Thread(new MessageBusClient());
+
+		MBusQueue queue = MBusQueueFactory.getQueue(System.getProperty(Constants.MESSAGEBUS_TOPIC));
+
+		IMBusWorker worker = MBusWorkerFactory.getWorker(System.getProperty(Constants.MESSAGEBUS_TOPIC));
+
+		Thread workerThread = new Thread(new MBusClientWorker(queue,worker));
+		clientThread.start();
+		//System.out.println("Client started, starting worker...");
+		workerThread.start();
+		clientThread.join();
+		workerThread.join();
+	}
+
 }

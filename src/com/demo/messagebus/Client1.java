@@ -1,5 +1,6 @@
 package com.demo.messagebus;
 
+import com.demo.messagebus.common.Client;
 import com.demo.messagebus.common.Message;
 
 public class Client1 implements Client {
