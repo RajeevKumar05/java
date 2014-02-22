@@ -1,20 +1,20 @@
 package com.demo.messagebus.common;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Queue;
 
 public class MBusQueue {
-	public Queue<Message> queue;
+	private Queue<Message> queue;
+	private String name = null;
 	
 	public MBusQueue(Queue<Message> queue){
 		this.queue = queue;
 	}
 	
 	public void add(Message msg){
-		System.out.println("Adding to queue.");
-		System.out.println("Before, Queue size = "+this.queue.size());
 		this.queue.offer(msg);
-		System.out.println("After, Queue size = "+this.queue.size());
 	}
 	
 	public Message poll(){
@@ -31,7 +31,26 @@ public class MBusQueue {
 		}
 	}
 	
+	public List<Message> fetch(int n){
+		List<Message> msgs = new ArrayList<Message>();
+		while(n > 0 && this.queue.size() > 0){
+			msgs.add(this.queue.poll());
+			n--;
+		}
+		System.out.println("Returning "+msgs.size()+", messages");
+		for(int i=0;i<msgs.size();i++){
+			System.out.println(msgs.get(i).toString()+"\n\n");
+		}
+		return msgs;
+	}
+	
 	public int size(){
 		return this.queue.size();
+	}
+	
+	public String name(){
+		if(this.name != null)
+			return this.name;
+		return "Unknown";
 	}
 }

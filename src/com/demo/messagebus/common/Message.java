@@ -3,6 +3,7 @@ package com.demo.messagebus.common;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -17,12 +18,25 @@ public class Message {
 		this.msg = new JSONObject(msg);
 	}
 	
+	public Message(JSONObject msg){
+		this.msg = msg;
+	}
+	
 	public String get(String key) throws JSONException{
 		Object val = msg.get(key);
 		if(val != null)
 			return ""+val;
 		return null;
 				
+	}
+	
+	public JSONArray getList(String key){
+		try {
+			return new JSONArray(this.msg.getString(key));
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		return new JSONArray();
 	}
 	
 	public boolean containsKey(String key){
@@ -37,7 +51,7 @@ public class Message {
 	}
 	
 	public String topic() throws JSONException{
-		return msg.getString("topic");
+		return msg.getString(Constants.MESSAGEBUS_TOPIC);
 	}
 	
 	public JSONObject payload() throws JSONException{

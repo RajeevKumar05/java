@@ -29,14 +29,15 @@ public class MessageBus {
 		return true;
 	}
 	
-	public static boolean process(Message m) throws JSONException{
+	public static List<Message> process(Message m) throws JSONException{
 		if(m.containsKey("isRegistration") && m.get("isRegistration") != null && m.get("isRegistration").equalsIgnoreCase("YES")){
 			addClient(m);
-			return true;
+			return null;
+		}else{
+			MessageBusServer.queue.offer(m);
+			MessageHandler mh = new MessageHandler(m,clientStore.get(m.topic()));
+			mh.sendMessage();
+			return null;
 		}
-		MessageBusServer.queue.offer(m);
-		MessageHandler mh = new MessageHandler(m,clientStore.get(m.topic()));
-		mh.sendMessage();
-		return true;
 	}
 }

@@ -64,6 +64,22 @@ public class MessageBusProducer {
 		br.close();
 		pipe.close();
 	}
+	
+	public static void sendToSocket(Socket pipe,Message message) throws IOException{
+		System.out.println("Writing data to client socket");
+		PrintWriter out = new PrintWriter(pipe.getOutputStream(), true);
+		InputStream is = new ByteArrayInputStream(message.toString().getBytes());
+		BufferedReader br = new BufferedReader(new InputStreamReader(is));
+		StringBuilder msg = new StringBuilder();
+
+		String line = br.readLine();
+		while(line != null){
+			msg.append(line);
+			line = br.readLine();
+		}
+		out.println(msg);
+		out.println("BYE");
+	}
 
 	public static void main_test(String[] args) throws IOException {
 
@@ -110,7 +126,7 @@ public class MessageBusProducer {
 		Map<String,Object> m = new HashMap<String,Object>();
 		m.put("firstName", "Rajeev");
 		m.put("lastName", "Kumar");
-		m.put("topic", System.getProperty(Constants.MESSAGEBUS_TOPIC));
+		m.put(Constants.MESSAGEBUS_TOPIC, System.getProperty(Constants.MESSAGEBUS_TOPIC));
 		Message msg = new Message(m);
 		System.out.println("Pushing : "+m.toString());
 		MessageBusProducer.produce("localhost", 4444, msg);
